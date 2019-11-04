@@ -1,0 +1,28 @@
+{
+  "name": "rdf-framing",
+  "version": "1.0.0",
+  "description": "Frame your rdf quads using javascript object",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -r ts-node/register tests/**/*.test.ts --timeout 100000"
+  },
+  "keywords": [
+    "rdf",
+    "framing"
+  ],
+  "author": "Ruben Dedecker",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/chai": "^4.2.3",
+    "@types/mocha": "^5.2.7",
+    "chai": "^4.2.0",
+    "mocha": "^6.2.2",
+    "nyc": "^14.1.1"
+  },
+  "dependencies": {
+    "axios": "^0.19.0",
+    "ldfetch": "^1.1.2",
+    "ts-node": "^8.4.1",
+    "typescript": "^3.6.4"
+  }
+}
