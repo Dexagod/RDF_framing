@@ -1,13 +1,13 @@
 import { Graph } from './Graph';
 
-export class Parser{
-  objectMap = new Map<any, any>();
-  graphMap = new Map<any, any>();
+export class QTOconverter{
+  private objectMap = new Map<any, any>();
+  private graphMap = new Map<any, any>();
 
-  graphsFromItem = new Map<any, any>();
+  private graphsFromItem = new Map<any, any>();
 
-  objectPerId = new Map();
-  objectPerType = new Map();
+  private objectPerId = new Map();
+  private objectPerType = new Map();
 
   processQuads(quads : Array<any>){
     let subjectMap = new Map<any, any>();
@@ -59,7 +59,7 @@ export class Parser{
 
   private createObjects(subjectMap : Map<any, any>, ids : Set<any>){
     for (let id of Array.from(ids.keys())){
-      let foundObj = this.searchMatching(id, id, false, subjectMap)
+      let foundObj = this.searchMatching(id, id, subjectMap, new Set(), null)
       if (! this.objectPerId.has(id)){
         this.objectPerId.set(id, foundObj)
         if (foundObj.hasOwnProperty("@type")){
@@ -72,26 +72,22 @@ export class Parser{
     }
   }
 
-  private searchMatching(baseId : string, id : string, blankNode : boolean, subjectMap : Map<any, any>) : any{
-    let object : any = null;
+  private searchMatching(baseId : string, id : string, subjectMap : Map<any, any>, visitedIds : Set<any>, object : any) : any{
+    if (visitedIds.has(id)){
+      return object
+    } else {
+      visitedIds.add(id)
+    }
     if (this.objectPerId.has(id)){
       object = this.objectPerId.get(id)
-    } else {
-      if (blankNode){
-        object = {
-          "termType" : "BlankNode",
-        }
-      } else {
-        object = { 
-          "id" : id,
-        }
-      }
-    }
+    } 
     if (subjectMap.has(id)){
       let quads = subjectMap.get(id);
+      if (object === null || object === undefined) {object = quads[0].subject}
+
       for (let quad of quads){
         if (quad.object.termType === "BlankNode") {
-          object[quad.predicate.value] = this.searchMatching(baseId, quad.object.value, true, subjectMap)
+          object[quad.predicate.value] = this.searchMatching(baseId, quad.object.value, subjectMap, visitedIds, quad.object)
         } else {
           if (quad.object.termType === "NamedNode") {
             this.addToSetMap(this.objectMap, quad.object.value, baseId)
