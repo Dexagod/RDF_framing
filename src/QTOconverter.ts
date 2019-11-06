@@ -64,9 +64,9 @@ export class QTOconverter{
         this.objectPerId.set(id, foundObj)
         if (foundObj.hasOwnProperty("@type")){
           this.addToListMap
-          this.addToMapMap(this.objectPerType, foundObj["@type"].value, id, foundObj)
+          this.addToMapMap(this.objectPerType, foundObj["@type"][0].value, id, foundObj)
         } else if (foundObj.hasOwnProperty('http://www.w3.org/1999/02/22-rdf-syntax-ns#type')){
-          this.addToMapMap(this.objectPerType, foundObj['http://www.w3.org/1999/02/22-rdf-syntax-ns#type'].value, id, foundObj)
+          this.addToMapMap(this.objectPerType, foundObj['http://www.w3.org/1999/02/22-rdf-syntax-ns#type'][0].value, id, foundObj)
         }
       }
     }
@@ -85,14 +85,35 @@ export class QTOconverter{
       let quads = subjectMap.get(id);
       if (object === null || object === undefined) {object = quads[0].subject}
 
+      let newaddition = true;
       for (let quad of quads){
-        if (quad.object.termType === "BlankNode") {
-          object[quad.predicate.value] = this.searchMatching(baseId, quad.object.value, subjectMap, visitedIds, quad.object)
-        } else {
-          if (quad.object.termType === "NamedNode") {
-            this.addToSetMap(this.objectMap, quad.object.value, baseId)
+        newaddition = true;
+        if (object.hasOwnProperty(quad.predicate.value)) {
+          for (let obj of object[quad.predicate.value]){
+            if (obj.value === quad.object.value){
+              newaddition = false;
+              break;
+            }
           }
-          object[quad.predicate.value] = quad.object
+          if (newaddition === true) {
+            if (quad.object.termType === "BlankNode") {
+              object[quad.predicate.value].push(this.searchMatching(baseId, quad.object.value, subjectMap, visitedIds, quad.object));
+            } else {
+              if (quad.object.termType === "NamedNode") {
+                this.addToSetMap(this.objectMap, quad.object.value, baseId)
+              }
+              object[quad.predicate.value].push(quad.object);
+            }
+          }
+        } else {
+          if (quad.object.termType === "BlankNode") {
+            object[quad.predicate.value] = [ this.searchMatching(baseId, quad.object.value, subjectMap, visitedIds, quad.object) ];
+          } else {
+            if (quad.object.termType === "NamedNode") {
+              this.addToSetMap(this.objectMap, quad.object.value, baseId)
+            }
+            object[quad.predicate.value] = [ quad.object ];
+          }
         }
       }
 
