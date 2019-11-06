@@ -1,6 +1,6 @@
 export class Graph{
-  value : any;
-  constructor(value : any){
-    this.value = value
+  id : any;
+  constructor(id : any){
+    this.id = id
   }
 }

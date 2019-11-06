@@ -10,16 +10,22 @@ export class QTOconverter{
   private objectPerType = new Map();
 
   processQuads(quads : Array<any>){
+    if (quads === null || quads === undefined || quads.length === undefined || quads.length === 0) {
+      return;
+    }
+
     let subjectMap = new Map<any, any>();
     let ids = new Set<any>();
   
     for (let quad of quads){
-      this.addToListMap(subjectMap, quad.subject.value, quad)
-      if (quad.subject.termType === "NamedNode") {
-        ids.add(quad.subject.value)
-      }
-      if ( quad.graph.termType === "BlankNode" || quad.graph.termType === "NamedNode"){
-        this.addToSetMap(this.graphMap, quad.graph.value, quad.subject.value)
+      if (quad !== undefined && quad !== null){
+        this.addToListMap(subjectMap, this.getIdOrValue(quad.subject), quad)
+        if (quad.subject.termType === "NamedNode") {
+          ids.add(quad.subject.value)
+        }
+        if ( quad.graph.termType === "BlankNode" || quad.graph.termType === "NamedNode"){
+          this.addToSetMap(this.graphMap, this.getIdOrValue(quad.graph), this.getIdOrValue(quad.subject))
+        }
       }
     }
     this.createObjects(subjectMap, ids);
@@ -60,13 +66,21 @@ export class QTOconverter{
   private createObjects(subjectMap : Map<any, any>, ids : Set<any>){
     for (let id of Array.from(ids.keys())){
       let foundObj = this.searchMatching(id, id, subjectMap, new Set(), null)
+
+      if (foundObj.hasOwnProperty("id")){
+        Object.defineProperty(foundObj, "value", {value: foundObj["id"], writable: true})
+        // foundObj.setAttribute("value", foundObj["id"])
+      } else if (foundObj.hasOwnProperty("value")){
+        Object.defineProperty(foundObj, "id", {value : foundObj["value"], writable: true})
+        // foundObj.setAttribute("id", foundObj["value"])
+      }
       if (! this.objectPerId.has(id)){
         this.objectPerId.set(id, foundObj)
         if (foundObj.hasOwnProperty("@type")){
           this.addToListMap
           this.addToMapMap(this.objectPerType, foundObj["@type"][0].value, id, foundObj)
         } else if (foundObj.hasOwnProperty('http://www.w3.org/1999/02/22-rdf-syntax-ns#type')){
-          this.addToMapMap(this.objectPerType, foundObj['http://www.w3.org/1999/02/22-rdf-syntax-ns#type'][0].value, id, foundObj)
+          this.addToMapMap(this.objectPerType, this.getIdOrValue(foundObj['http://www.w3.org/1999/02/22-rdf-syntax-ns#type'][0]), id, foundObj)
         }
       }
     }
@@ -88,31 +102,31 @@ export class QTOconverter{
       let newaddition = true;
       for (let quad of quads){
         newaddition = true;
-        if (object.hasOwnProperty(quad.predicate.value)) {
-          for (let obj of object[quad.predicate.value]){
-            if (obj.value === quad.object.value){
+        if (object.hasOwnProperty(this.getIdOrValue(quad.predicate))) {
+          for (let obj of object[this.getIdOrValue(quad.predicate)]){
+            if (this.getIdOrValue(obj) === this.getIdOrValue(quad.object)){
               newaddition = false;
               break;
             }
           }
           if (newaddition === true) {
             if (quad.object.termType === "BlankNode") {
-              object[quad.predicate.value].push(this.searchMatching(baseId, quad.object.value, subjectMap, visitedIds, quad.object));
+              object[this.getIdOrValue(quad.predicate)].push(this.searchMatching(baseId, this.getIdOrValue(quad.object), subjectMap, visitedIds, quad.object));
             } else {
               if (quad.object.termType === "NamedNode") {
-                this.addToSetMap(this.objectMap, quad.object.value, baseId)
+                this.addToSetMap(this.objectMap, this.getIdOrValue(quad.object), baseId)
               }
-              object[quad.predicate.value].push(quad.object);
+              object[this.getIdOrValue(quad.predicate)].push(quad.object);
             }
           }
         } else {
           if (quad.object.termType === "BlankNode") {
-            object[quad.predicate.value] = [ this.searchMatching(baseId, quad.object.value, subjectMap, visitedIds, quad.object) ];
+            object[this.getIdOrValue(quad.predicate)] = [ this.searchMatching(baseId, this.getIdOrValue(quad.object), subjectMap, visitedIds, quad.object) ];
           } else {
             if (quad.object.termType === "NamedNode") {
-              this.addToSetMap(this.objectMap, quad.object.value, baseId)
+              this.addToSetMap(this.objectMap, this.getIdOrValue(quad.object), baseId)
             }
-            object[quad.predicate.value] = [ quad.object ];
+            object[this.getIdOrValue(quad.predicate)] = [ quad.object ];
           }
         }
       }
@@ -122,6 +136,16 @@ export class QTOconverter{
       return new Graph(id)
     } 
     return object; 
+  }
+
+  private getIdOrValue(object : any){
+    if (object.hasOwnProperty("value")){
+      return object["value"]
+    } else if (object.hasOwnProperty("id")){
+      return object["id"]
+    } else {
+      throw new Error("Triple " + object.toString() + " contains no id or value field")
+    }
   }
 
   private addToListMap(listMap : Map<any, any>, key : any, value : any){
