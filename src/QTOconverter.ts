@@ -66,14 +66,6 @@ export class QTOconverter{
   private createObjects(subjectMap : Map<any, any>, ids : Set<any>){
     for (let id of Array.from(ids.keys())){
       let foundObj = this.searchMatching(id, id, subjectMap, new Set(), null)
-
-      if (foundObj.hasOwnProperty("id")){
-        Object.defineProperty(foundObj, "value", {value: foundObj["id"], writable: true})
-        // foundObj.setAttribute("value", foundObj["id"])
-      } else if (foundObj.hasOwnProperty("value")){
-        Object.defineProperty(foundObj, "id", {value : foundObj["value"], writable: true})
-        // foundObj.setAttribute("id", foundObj["value"])
-      }
       if (! this.objectPerId.has(id)){
         this.objectPerId.set(id, foundObj)
         if (foundObj.hasOwnProperty("@type")){
@@ -140,13 +132,19 @@ export class QTOconverter{
 
   private getIdOrValue(object : any){
     if (object.hasOwnProperty("value")){
+      if (! object.hasOwnProperty("id")){ Object.defineProperty(object, "id", {value: object["value"], writable: false}) }
       return object["value"]
     } else if (object.hasOwnProperty("id")){
+      if (! object.hasOwnProperty("value")){ Object.defineProperty(object, "value", {value: object["id"], writable: false}) }
       return object["id"]
     } else {
       throw new Error("Triple " + object.toString() + " contains no id or value field")
     }
   }
+
+
+
+
 
   private addToListMap(listMap : Map<any, any>, key : any, value : any){
     if (listMap.has(key)){
