@@ -1,6 +1,9 @@
 import { Graph } from './Graph';
+var ldfetch = require("ldfetch")
 
 export class QTOconverter{
+  private fetcher = new ldfetch({})
+
   private objectMap = new Map<any, any>();
   private graphMap = new Map<any, any>();
 
@@ -9,7 +12,19 @@ export class QTOconverter{
   private objectPerId = new Map();
   private objectPerType = new Map();
 
-  processQuads(quads : Array<any>){
+  private processedIRIs = new Set();
+
+
+  async processId(id : string){
+    let baseId = id.split("#")
+    if (! this.processedIRIs.has(baseId[0])){
+      console.log("processing file:", id)
+      this.processQuads( (await this.fetcher.get(id)).triples )
+      this.processedIRIs.add(baseId[0])
+    }
+  }
+
+  private processQuads(quads : Array<any>){
     if (quads === null || quads === undefined || quads.length === undefined || quads.length === 0) {
       return;
     }
@@ -39,6 +54,10 @@ export class QTOconverter{
     return this.objectPerId.get(id)
   }
 
+  checkIdPresent(id : any) : boolean {
+    return this.objectPerId.get(id) !== undefined;
+  }
+
   getItemsForType(type : any) : Map<any, object>{
     return this.objectPerType.get(type)
   }
@@ -63,14 +82,37 @@ export class QTOconverter{
     return this.graphMap.get(graphId).indexOf(itemId) !== -1
   }
 
+  returnAllConnectedItemsForId(id : any){
+    let node = this.objectPerId.get(id)
+    return this._recursiveFillIds(node, new Array())
+
+  }
+
+  ignoreTerms =  new Set(['termType', 'value', 'id', 'equals'])
+  private _recursiveFillIds(node : any, passedIds : Array<any>){
+    let id = this.getIdOrValue(node);
+    if (passedIds.indexOf(id) !== -1){
+      return node;
+    }
+    if (this.checkIdPresent(id)){
+      node = this.getItemForId(id)
+    }
+    let nodeProperties = Object.keys(node)
+    for (let property of nodeProperties){
+      if (! this.ignoreTerms.has(property)){
+        node[property] = this._recursiveFillIds(node[property], passedIds.concat(id))
+      }
+    }
+
+  }
+
   private createObjects(subjectMap : Map<any, any>, ids : Set<any>){
     for (let id of Array.from(ids.keys())){
       let foundObj = this.searchMatching(id, id, subjectMap, new Set(), null)
       if (! this.objectPerId.has(id)){
         this.objectPerId.set(id, foundObj)
         if (foundObj.hasOwnProperty("@type")){
-          this.addToListMap
-          this.addToMapMap(this.objectPerType, foundObj["@type"][0].value, id, foundObj)
+          this.addToMapMap(this.objectPerType, this.getIdOrValue(foundObj["@type"][0]), id, foundObj)
         } else if (foundObj.hasOwnProperty('http://www.w3.org/1999/02/22-rdf-syntax-ns#type')){
           this.addToMapMap(this.objectPerType, this.getIdOrValue(foundObj['http://www.w3.org/1999/02/22-rdf-syntax-ns#type'][0]), id, foundObj)
         }
@@ -132,10 +174,10 @@ export class QTOconverter{
 
   private getIdOrValue(object : any){
     if (object.hasOwnProperty("value")){
-      if (! object.hasOwnProperty("id")){ Object.defineProperty(object, "id", {value: object["value"], writable: false}) }
+      if (! object.hasOwnProperty("id")){ Object.defineProperty(object, "id", {value: object["value"], writable: true}) }
       return object["value"]
     } else if (object.hasOwnProperty("id")){
-      if (! object.hasOwnProperty("value")){ Object.defineProperty(object, "value", {value: object["id"], writable: false}) }
+      if (! object.hasOwnProperty("value")){ Object.defineProperty(object, "value", {value: object["id"], writable: true}) }
       return object["id"]
     } else {
       throw new Error("Triple " + object.toString() + " contains no id or value field")
