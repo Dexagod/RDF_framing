@@ -58,6 +58,10 @@ export class QTOconverter{
     return this.objectPerId.get(id) !== undefined;
   }
 
+  checkGraphIdPresent(id : any) : boolean {
+    return this.graphMap.get(id) !== undefined;
+  }
+
   getItemsForType(type : any) : Map<any, object>{
     return this.objectPerType.get(type)
   }
@@ -94,6 +98,17 @@ export class QTOconverter{
     if (passedIds.indexOf(id) !== -1){
       return node;
     }
+
+    if (this.checkGraphIdPresent(id)){
+      let graphList = []
+      let graphIds = [this.getAllItemsForGraph(id)]
+      for (let id of graphIds){
+        let node = this.objectPerId.get(id)
+        graphList.push(this._recursiveFillIds(node, passedIds.concat(id)))
+      }
+    }
+    
+    // Node is not a graph node
     if (this.checkIdPresent(id)){
       node = this.getItemForId(id)
     }
