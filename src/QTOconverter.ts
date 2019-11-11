@@ -86,14 +86,19 @@ export class QTOconverter{
     return this.graphMap.get(graphId).indexOf(itemId) !== -1
   }
 
-  returnAllConnectedItemsForId(id : any){
+  getAllConnectedItemsForId(id : any){
     let node = this.objectPerId.get(id)
+    return this._recursiveFillIds(node, new Array())
+
+  }
+  getAllConnectedItemsForNode(node : any){
     return this._recursiveFillIds(node, new Array())
 
   }
 
   ignoreTerms =  new Set(['termType', 'value', 'id', 'equals'])
   private _recursiveFillIds(node : any, passedIds : Array<any>){
+    console.log(node)
     let id = this.getIdOrValue(node);
     if (passedIds.indexOf(id) !== -1){
       return node;
@@ -114,9 +119,13 @@ export class QTOconverter{
     }
     let nodeProperties = Object.keys(node)
     for (let property of nodeProperties){
-      if (! this.ignoreTerms.has(property)){
-        node[property] = this._recursiveFillIds(node[property], passedIds.concat(id))
+      let propertyNodes = new Array()
+      for (let propertyNode of property){
+        if (! this.ignoreTerms.has(property)){
+          propertyNodes.push(this._recursiveFillIds(propertyNode, passedIds.concat(id)))
+        }
       }
+      node[property] = propertyNodes
     }
 
   }
