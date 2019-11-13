@@ -18,8 +18,10 @@ export class QuadCache{
       let baseId = id.split("#")
       if (! this.processedIRIs.has(baseId[0])){
         console.log("fetching", baseId[0])
+        console.time("adding file")
         this.processQuads( (await this.fetcher.get(id)).triples )
         this.processedIRIs.add(baseId[0])
+        console.timeEnd("adding file")
       }
       return null;
     } catch {
@@ -33,15 +35,38 @@ export class QuadCache{
     }
     for (let quad of quads){
       if (quad !== undefined && quad !== null){
-        this.addToListMap(this.subjectMap, this.getIdOrValue(quad.subject), quad)
-        if ( this.getIdOrValue(quad.predicate) === "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"){
-          this.addToSetMap(this.objectPerType, this.getIdOrValue(quad.object), this.getIdOrValue(quad.subject)) // Map<typename, [id1, id2, ...]
-        }
-        if ( quad.graph.termType === "BlankNode" || quad.graph.termType === "NamedNode"){
-          this.addToSetMap(this.graphMap, this.getIdOrValue(quad.graph), this.getIdOrValue(quad.subject))
+        if (! this.checkQuadPresent(quad)){
+          this.addToListMap(this.subjectMap, this.getIdOrValue(quad.subject), quad)
+          if ( this.getIdOrValue(quad.predicate) === "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"){
+            this.addToSetMap(this.objectPerType, this.getIdOrValue(quad.object), this.getIdOrValue(quad.subject)) // Map<typename, [id1, id2, ...]
+          }
+          if ( quad.graph.termType === "BlankNode" || quad.graph.termType === "NamedNode"){
+            this.addToSetMap(this.graphMap, this.getIdOrValue(quad.graph), this.getIdOrValue(quad.subject))
+          }
         }
       }
     }
+  }
+
+  private checkQuadPresent(quad : any) : boolean{
+    if (this.subjectMap.has( this.getIdOrValue(quad.subject) )){
+      for (let presentQuad of this.subjectMap.get(this.getIdOrValue(quad.subject))){
+        try{
+          if (presentQuad.equals(quad)){
+            return true
+          }
+        } catch {
+          if (
+            (this.getIdOrValue(presentQuad.object) === this.getIdOrValue(presentQuad.object)) &&
+            (this.getIdOrValue(presentQuad.predicate) === this.getIdOrValue(presentQuad.predicate)) &&
+            (this.getIdOrValue(presentQuad.subject) === this.getIdOrValue(presentQuad.subject))
+          ){
+            return true;
+          }
+        }
+      } 
+    }
+    return false;
   }
 
   async getItemForId(id : any) : Promise<ReturnWrapper>{
