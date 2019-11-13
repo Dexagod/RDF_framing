@@ -15,12 +15,17 @@ export class QTOconverter{
   ignoreTerms =  new Set(['termType', 'value', 'id', 'equals', 'datatype'])
 
   async processId(id : string){
-    let baseId = id.split("#")
-    if (! this.processedIRIs.has(baseId[0])){
-      this.processQuads( (await this.fetcher.get(id)).triples )
-      this.processedIRIs.add(baseId[0])
+    try {
+      let baseId = id.split("#")
+      if (! this.processedIRIs.has(baseId[0])){
+        console.log("fetching", baseId[0])
+        this.processQuads( (await this.fetcher.get(id)).triples )
+        this.processedIRIs.add(baseId[0])
+      }
+      return null;
+    } catch {
+      return null
     }
-    return null;
   }
 
   private processQuads(quads : Array<any>){
@@ -50,6 +55,10 @@ export class QTOconverter{
     }
     return this.getConnectedBlankNodesForId(id)
     // return this.objectPerId.get(id)
+  }
+
+  getLoadedFiles(){
+    return this.processedIRIs
   }
 
   getReverseConnections(id : any){
