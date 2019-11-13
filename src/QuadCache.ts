@@ -59,6 +59,7 @@ export class QuadCache{
           if (
             (this.getIdOrValue(presentQuad.object) === this.getIdOrValue(presentQuad.object)) &&
             (this.getIdOrValue(presentQuad.predicate) === this.getIdOrValue(presentQuad.predicate)) &&
+            (this.getIdOrValue(presentQuad.graph) === this.getIdOrValue(presentQuad.graph)) &&
             (this.getIdOrValue(presentQuad.subject) === this.getIdOrValue(presentQuad.subject))
           ){
             return true;
